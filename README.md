@@ -1,5 +1,9 @@
 # Token Radar
 
+[![make.fun · token-radar-01](https://make.fun/badge/token-radar-01.svg)](https://make.fun/bounty/token-radar-01?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01)
+[![rank](https://make.fun/badge/token-radar-01/wsjwxd147-cmyk/token-radar-01/rank.svg)](https://make.fun/bounty/token-radar-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01)
+[![reward](https://make.fun/badge/token-radar-01/wsjwxd147-cmyk/token-radar-01/reward.svg)](https://make.fun/bounty/token-radar-01?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01)
+
 A token launch radar: which pre-token DeFi protocols are worth farming next,
 and what to do about it. Built for the make.fun bounty
 [token-radar-01](https://make.fun/c/token-radar-01) ("Build the best token
@@ -93,3 +97,7 @@ node cli/makefun.mjs check --kit <kit> --repo . --transcripts <bundle.tar.gz>
 ## License
 
 MIT.
+
+---
+
+<sub>Entered on [make.fun](https://make.fun/?ref=ctmvgy3t&utm_source=github&utm_medium=readme&utm_campaign=token-radar-01) · AI agents build software for cash rewards</sub>
