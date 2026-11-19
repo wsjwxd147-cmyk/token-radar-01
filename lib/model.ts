@@ -154,6 +154,19 @@ export interface LiveRow {
   change_7d: number | null;
 }
 
+/** One category's weight on the board: how many protocols, how much value, and its best row. */
+export interface CategoryStats {
+  category: string;
+  protocols: number;
+  total_tvl_usd: number;
+  total_implied_usd: number;
+  median_multiple: number;
+  top_slug: string;
+  top_name: string;
+  top_implied_usd: number;
+  share_of_implied: number;
+}
+
 /** Everything the dashboard needs: the board, the live set, and the model it runs. */
 export interface RadarData {
   as_of: string;
@@ -167,6 +180,9 @@ export interface RadarData {
   live_size: number;
   global_multiple: number;
   multiples: CategoryMultiple[];
+  categories: CategoryStats[];
+  top10_share: number;
+  growth_leaders: RadarRow[];
   rows: RadarRow[];
   live: LiveRow[];
 }
@@ -444,6 +460,57 @@ export function liveRows(snapshot: Snapshot): LiveRow[] {
     }));
 }
 
+/** The board grouped by category: each category's protocols, value, median multiple and best row. */
+export function categoryStats(board: BoardRow[]): CategoryStats[] {
+  const byCategory = new Map<string, BoardRow[]>();
+  for (const row of board) {
+    const key = row.category ?? 'Other';
+    const list = byCategory.get(key) ?? [];
+    list.push(row);
+    byCategory.set(key, list);
+  }
+  const grand = board.reduce((sum, row) => sum + row.implied_value_usd, 0) || 1;
+  const stats = [...byCategory.entries()].map(([category, rows]) => {
+    const totalTvl = rows.reduce((sum, row) => sum + row.tvl_usd, 0);
+    const totalImplied = rows.reduce((sum, row) => sum + row.implied_value_usd, 0);
+    const multiples = rows.map((row) => row.model.category_multiple).sort((a, b) => a - b);
+    const top = rows.reduce((best, row) => (row.implied_value_usd > best.implied_value_usd ? row : best), rows[0]!);
+    const stat: CategoryStats = {
+      category,
+      protocols: rows.length,
+      total_tvl_usd: totalTvl,
+      total_implied_usd: totalImplied,
+      median_multiple: round4(median(multiples)),
+      top_slug: top.slug,
+      top_name: top.name,
+      top_implied_usd: top.implied_value_usd,
+      share_of_implied: Math.round((totalImplied / grand) * 1000) / 10,
+    };
+    return stat;
+  });
+  stats.sort((a, b) => b.total_implied_usd - a.total_implied_usd || a.category.localeCompare(b.category));
+  return stats;
+}
+
+/** The share of the board's implied value held by its top `n` rows, as a percentage. */
+export function topShare(board: BoardRow[], n: number): number {
+  const grand = board.reduce((sum, row) => sum + row.implied_value_usd, 0);
+  if (grand <= 0) return 0;
+  const top = board.slice(0, Math.max(0, n)).reduce((sum, row) => sum + row.implied_value_usd, 0);
+  return Math.round((top / grand) * 1000) / 10;
+}
+
+/**
+ * The fastest-growing pre-token rows by seven-day TVL change, strongest growth first.
+ * Growth alone never ranks a row: these are the board's rows, already scored, shown so the
+ * earliest risers are visible before their implied value catches up.
+ */
+export function growthLeaders(board: BoardRow[], n: number): BoardRow[] {
+  const grown = board.filter((row) => row.change_7d !== null && row.change_7d > 0);
+  grown.sort((a, b) => (b.change_7d ?? 0) - (a.change_7d ?? 0) || b.implied_value_usd - a.implied_value_usd);
+  return grown.slice(0, Math.max(0, n));
+}
+
 /** A board row's compact form for data.js, with the farm plan generated in the page. */
 export function radarRow(row: BoardRow): RadarRow {
   return {
@@ -470,6 +537,7 @@ export function buildRadar(snapshot: Snapshot, model: ModelConstants = MODEL): {
   const board = buildBoard(snapshot, model);
   const live = liveRows(snapshot);
   const multiples = categoryMultiples(snapshot, model);
+  const categories = categoryStats(board);
   const early = board.filter((r) => !snapshot.watchlist.includes(r.slug)).length;
   const radar: RadarData = {
     as_of: snapshot.as_of,
@@ -483,6 +551,9 @@ export function buildRadar(snapshot: Snapshot, model: ModelConstants = MODEL): {
     live_size: live.length,
     global_multiple: multiples.global,
     multiples: [...multiples.byCategory.values()].sort((a, b) => b.multiple - a.multiple || a.category.localeCompare(b.category)),
+    categories,
+    top10_share: topShare(board, 10),
+    growth_leaders: growthLeaders(board, 10).map(radarRow),
     rows: board.map(radarRow),
     live,
   };

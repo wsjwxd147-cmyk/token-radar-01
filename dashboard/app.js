@@ -180,6 +180,25 @@
     return total;
   }
 
+  function downloadCsv() {
+    var list = state.tab === 'pre-token' ? sortedRows(rows()) : DATA.live;
+    var head = 'rank,slug,name,category,chains,tvl_usd,change_7d,age_days,implied_value_usd\n';
+    var lines = list.map(function (r) {
+      var cells = state.tab === 'pre-token'
+        ? [r.rank, r.slug, r.name, r.category || '', (r.chains || []).join('|'), r.tvl_usd, r.change_7d === null ? '' : r.change_7d, r.age_days === null ? '' : r.age_days, r.implied_value_usd]
+        : ['live', r.slug, r.name, r.category || '', (r.chains || []).join('|'), r.tvl_usd, r.change_7d === null ? '' : r.change_7d, '', r.mcap_usd === null ? '' : r.mcap_usd];
+      return cells.map(function (v) { var s = String(v); return s.indexOf(',') >= 0 || s.indexOf('"') >= 0 ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(',');
+    });
+    var blob = new Blob([head + lines.join('\n') + '\n'], { type: 'text/csv' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'token-radar-board.csv';
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }
+
   function header() {
     return el('header', { class: 'top' },
       el('div', { class: 'brand' }, el('span', { class: 'mark' }), el('span', { class: 'brand-name', text: 'Token Radar' })),
@@ -231,6 +250,7 @@
       el('div', { class: 'field' }, el('label', { for: 'chain', text: 'Chain' }), chainSel),
       el('label', { class: 'check', for: 'wl' }, wl, 'Watchlist only'),
       el('div', { class: 'field' }, el('span', { class: 'sub', text: 'Token status' }), el('div', { class: 'tabs' }, pre, live)),
+      el('button', { class: 'button', type: 'button', text: 'Download CSV', onclick: function () { downloadCsv(); } }),
       el('span', { class: 'count', text: state.tab === 'pre-token' ? rows().length + ' rows shown' + (state.sandbox.active ? ' (what-if model)' : '') : DATA.live.length + ' live-token protocols' })
     );
   }
@@ -372,6 +392,82 @@
     );
   }
 
+  function categoryPanel() {
+    var cats = DATA.categories || [];
+    if (cats.length === 0) return el('section', { class: 'panel cat-panel' }, el('p', { class: 'sub', text: 'No category breakdown in this snapshot.' }));
+    var body = el('tbody');
+    cats.forEach(function (c, i) {
+      body.appendChild(el('tr', null,
+        el('td', { class: 'num', text: String(i + 1) }),
+        el('td', null, el('b', { text: c.category })),
+        el('td', { class: 'num', text: String(c.protocols) }),
+        el('td', { class: 'num', text: fmtUsd(c.total_tvl_usd) }),
+        el('td', { class: 'num', text: fmtUsd(c.total_implied_usd) }),
+        el('td', { class: 'num', text: String(c.median_multiple) }),
+        el('td', null, el('div', { class: 'name' }, el('b', { text: c.top_name }), el('span', { class: 'sub', text: fmtUsd(c.top_implied_usd) }))),
+        el('td', null, el('div', { class: 'implied' },
+          el('div', { class: 'bar', 'aria-hidden': 'true' }, el('i', { style: 'width:' + Math.max(2, Math.round(c.share_of_implied)) + '%' })),
+          el('span', { class: 'num', text: c.share_of_implied.toFixed(1) + '%' })
+        ))
+      ));
+    });
+    return el('section', { class: 'panel cat-panel' },
+      el('h2', { text: 'Where the value sits' }),
+      el('p', { class: 'sub', text: "The ranked board grouped by category. A category earns its place from the protocols in it, not from a headline: the top ten rows hold " + DATA.top10_share + "% of the board's implied value." }),
+      el('div', { class: 'table-wrap' },
+        el('table', { class: 'cat-table' },
+          el('caption', { class: 'sub', text: 'Categories by total implied value, strongest first.' }),
+          el('thead', null, el('tr', null,
+            el('th', { scope: 'col', text: '#' }),
+            el('th', { scope: 'col', text: 'Category' }),
+            el('th', { scope: 'col', text: 'Protocols' }),
+            el('th', { scope: 'col', text: 'Total TVL' }),
+            el('th', { scope: 'col', text: 'Total implied' }),
+            el('th', { scope: 'col', text: 'Median multiple' }),
+            el('th', { scope: 'col', text: 'Top protocol' }),
+            el('th', { scope: 'col', text: 'Share' })
+          )),
+          body
+        )
+      )
+    );
+  }
+
+  function growthPanel() {
+    var leaders = DATA.growth_leaders || [];
+    if (leaders.length === 0) return el('section', { class: 'panel cat-panel' }, el('p', { class: 'sub', text: 'No growing pre-token row in this snapshot.' }));
+    var body = el('tbody');
+    leaders.forEach(function (r, i) {
+      body.appendChild(el('tr', { onclick: function () { openDetail(r.slug); } },
+        el('td', { class: 'num', text: String(i + 1) }),
+        el('td', null, el('div', { class: 'name' },
+          el('b', null, r.name, WATCHLIST[r.slug] ? el('span', { class: 'badge-watch', text: 'WATCHLIST' }) : null),
+          el('span', { class: 'sub', text: (r.category || 'Other') + ' on ' + (r.chains && r.chains.length ? r.chains.slice(0, 2).join(', ') : 'an unnamed chain') })
+        )),
+        el('td', { class: 'num pos', text: fmtPct(r.change_7d) }),
+        el('td', { class: 'num', text: fmtUsd(r.tvl_usd) }),
+        el('td', { class: 'num', text: fmtUsd(r.implied_value_usd) })
+      ));
+    });
+    return el('section', { class: 'panel cat-panel' },
+      el('h2', { text: 'Growing fastest' }),
+      el('p', { class: 'sub', text: "Seven-day TVL growth among the ranked rows. A rising line this early is the radar's first hint, not a promise: check the row before you farm it." }),
+      el('div', { class: 'table-wrap' },
+        el('table', { class: 'cat-table' },
+          el('caption', { class: 'sub', text: 'Pre-token rows by seven-day growth, fastest first.' }),
+          el('thead', null, el('tr', null,
+            el('th', { scope: 'col', text: '#' }),
+            el('th', { scope: 'col', text: 'Protocol' }),
+            el('th', { scope: 'col', text: '7d' }),
+            el('th', { scope: 'col', text: 'TVL' }),
+            el('th', { scope: 'col', text: 'Implied value' })
+          )),
+          body
+        )
+      )
+    );
+  }
+
   var dialog = el('dialog', { class: 'detail', id: 'detail', 'aria-labelledby': 'detail-title' });
   dialog.addEventListener('close', function () { state.selected = null; writeHash(); });
 
@@ -430,6 +526,8 @@
     shell.appendChild(controls());
     shell.appendChild(state.tab === 'pre-token' ? boardTable() : liveTable());
     if (state.tab === 'pre-token') shell.appendChild(modelPanel());
+    if (state.tab === 'pre-token') shell.appendChild(categoryPanel());
+    if (state.tab === 'pre-token') shell.appendChild(growthPanel());
     app.appendChild(shell);
     app.setAttribute('aria-busy', 'false');
     if (!dialog.isConnected) app.appendChild(dialog);

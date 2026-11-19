@@ -49,6 +49,21 @@ as farm targets.
 Top of the board on this snapshot: Steakhouse Financial, $2.75B TVL,
 implied value $1.83B.
 
+## What the dashboard shows
+
+- The ranked board: every pre-token protocol, strongest implied value first,
+  with TVL, seven-day growth, age with no token, and the implied value bar.
+- Protocol detail: click a row for the model's own inputs, the recomputed
+  check against board.json, and the seven-step farm plan.
+- Model sandbox: move the growth weight, maturity floor or multiple scale
+  and the board recomputes live.
+- Where the value sits: the board grouped by category, with each category's
+  total TVL, total implied value, median multiple, best row and share.
+- Growing fastest: the ten pre-token rows with the strongest seven-day TVL
+  growth, so the earliest risers are visible before their implied value
+  catches up.
+- Download CSV: the rows on screen, in the order shown, as a spreadsheet.
+
 ## Farm plans
 
 Every row carries a 7-step plan: a fresh wallet, a first deposit sized to

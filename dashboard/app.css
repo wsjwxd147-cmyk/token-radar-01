@@ -111,6 +111,9 @@ tr:first-child .rank-badge { background: var(--accent); border-color: var(--acce
 
 .model { margin-top: var(--step-4); padding: var(--step-5); display: grid; gap: var(--step-4); }
 .model h2 { margin-bottom: 0; }
+.cat-panel { margin-top: var(--step-4); padding: var(--step-5); display: grid; gap: var(--step-4); }
+.cat-panel h2 { margin-bottom: 0; }
+.cat-table { font-size: 13px; }
 .formula { font-family: var(--font-num); font-size: 13px; line-height: 1.7; color: var(--muted); overflow-wrap: anywhere; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-control); padding: var(--step-3) var(--step-4); }
 .mult-table { width: 100%; font-size: 13px; }
 .mult-table th, .mult-table td { padding: var(--step-2) var(--step-3); }
